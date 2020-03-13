@@ -1,6 +1,7 @@
 import time
 from oppg3eii import step, get_energy, deep_copy
-from oppg4biii import create_atoms, ez_simulate
+from oppg4aii import create_atoms
+from oppg4biii import ez_simulate
 
 def simulate(atoms, dt, t_max, filename, update_func, L, completion, total_runs):
 	# Declare variables and save atoms
@@ -68,9 +69,10 @@ def main(filename, simulate_count):
 
 	start_time = time.time()
 	for i in range(simulate_count):
-		L, atoms = create_equalibrium_atoms(108, 1.7, 180, dt, length, "verlet")
+		L, atoms = create_equalibrium_atoms(864, 1.7, 180, dt, length, "verlet")
 
-		t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list = simulate(atoms, dt, length, filename, "verlet", L, i, simulate_count)
+		list_list = simulate(atoms, dt, length, filename, "verlet", L, i, simulate_count)
+		t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list = list_list
 		for i, (pot, kin, tot, temp, vac, msd) in enumerate(zip(pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list)):
 			sum_lists[0][i] += pot/simulate_count
 			sum_lists[1][i] += kin/simulate_count
@@ -85,5 +87,5 @@ def main(filename, simulate_count):
 			outfile.write(f"{t} {pot} {kin} {tot} {temp} {vac} {msd}\n")
 
 if __name__ == '__main__':
-	main("data4ci", 1)
+	main("null", 1)
 	pass

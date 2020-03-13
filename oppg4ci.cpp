@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <string>
 #include <random>
@@ -9,86 +10,31 @@
 #include <valarray>
 #include <glm/vec3.hpp>
 #include <glm/geometric.hpp>
+#include <omp.h>
+#include <mutex>
 
-using namespace std;
-using vec3 = glm::vec<3, double>;
-
-class Atom;
-void step(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double L, FILE *datafile);
-
-
-class Atom {
-	public:
-		vec3 force;
-		vec3 acc;
-		vec3 vel;
-		vec3 vel0;
-		vec3 pos;
-		vec3 pos0;
-		vec3 teleports;
-		Atom(vec3 pos, vec3 vel=vec3 {0, 0, 0}) {
-			this->pos = pos;
-			this->pos0 = pos;
-			this->vel = vel;
-			this->vel0 = vel;
-			this->force = (vec3) {0, 0, 0};
-			this->acc = (vec3) {0, 0, 0};
-			this->teleports = (vec3) {0, 0, 0};
-		}
-
-		void update(double dt, double L) {
-			// Update position and velocity
-			update_verlet(dt);
-
-			// Teleport if outside of box
-			if (pos.x > L) {
-				pos.x = pos.x - L;
-				teleports.x += 1;
-			} else if (pos.x < 0) {
-				pos.x = L - pos.x;
-				teleports.x -= 1;
-			}
-
-			if (pos.y > L) {
-				pos.y = pos.y - L;
-				teleports.y += 1;
-			} else if (pos.y < 0) {
-				pos.y = L - pos.y;
-				teleports.y -= 1;
-			}
-
-			if (pos.z > L) {
-				pos.z = pos.z - L;
-				teleports.z += 1;
-			} else if (pos.z < 0) {
-				pos.z = L - pos.z;
-				teleports.z -= 1;
-			}
-		}
-
-		void update_verlet(double dt) {
-			vec3 acc_prev = acc;
-			acc = force;
-			vel += 0.5*(acc_prev + acc)*dt;
-			pos += vel*dt + ((double) 0.5)*acc*pow(dt, 2);
-			force = (vec3) {0, 0, 0};
-		}
-
-		vec3 dist_traveled(double L) {
-			return pos + teleports*L;
-		}
-
-		void save_state(FILE *file) {
-			fprintf(file, "Ar %f %f %f\n", pos.x, pos.y, pos.z);
-		}
-};
+#include "oppg4ci.hpp"
 
 double get_time() {
 	return (double) chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count()/1000.0;
 }
 
 void printray(vec3 ray) {
-	cout << ray.x << " " << ray.y << " " << ray.z << "\n";
+	printf("%.18f %.18f %.18f\n", ray.x, ray.y, ray.z);
+}
+
+vector<string> split(string s, string delimiter) {
+	vector<string> elements;
+	size_t pos = 0;
+	string token;
+	while ((pos = s.find(delimiter)) != string::npos) {
+		token = s.substr(0, pos);
+		elements.push_back(token);
+		s.erase(0, pos + delimiter.length());
+	}
+	elements.push_back(s);
+
+	return elements;
 }
 
 
@@ -111,7 +57,7 @@ void get_atom_combinations(vector<vector<Atom*>> &combinations, vector<Atom> &at
 
 
 double U(double r_sqrd) {
-	return 4*(pow(r_sqrd, -6) - pow(r_sqrd, -3)) + 2912/531441;
+	return 4*(pow(r_sqrd, -6) - pow(r_sqrd, -3)) + 2912/531441.0;
 }
 
 vec3 get_force(vec3 &between_vec, double r_sqrd) {
@@ -209,7 +155,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 		tot_list[i] = tot;
 
 		// Calculate and store temperature
-		double temperature = (2/(3*atoms.size()))*kin;
+		double temperature = (2.0/(3*atoms.size()))*kin;
 		tmp_list[i] = temperature;
 
 		// Calculate and store velocity autocorrelation
@@ -219,7 +165,7 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 			double vac_denom = get_length_sqrd(atom.vel0);
 			vac += vac_emum/vac_denom;
 		}
-		vac = vac/atoms.size();
+		vac = vac/((double) atoms.size());
 		vac_list[i] = vac;
 
 		// Calculate and store mean squared displacement
@@ -227,12 +173,11 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 		for (Atom &atom : atoms) {
 			msd += get_length_sqrd(atom.dist_traveled(L) - atom.pos0);
 		}
-		msd = msd/atoms.size();
+		msd = msd/((double) atoms.size());
 		msd_list[i] = msd;
 
 		step(atoms, atom_combinations, dt, L, datafile);
 	}
-	cout << "\n";
 
 	fclose(datafile);
 	return make_tuple(t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list);
@@ -281,24 +226,38 @@ vector<vec3> box_positions(int n, double d) {
 }
 
 tuple<double, vector<Atom>, vector<vector<Atom*>>> create_atoms(int atom_count, double d, double temperature) {
-	int n = cbrt(atom_count)/cbrt(4);
+	int n = cbrt(atom_count/4.0);
 	double L = d*n;
 
 	vector<Atom> atoms;
 	atoms.reserve(atom_count);
 
-	default_random_engine generator;
+	default_random_engine generator(chrono::system_clock::now().time_since_epoch().count());
 	normal_distribution<double> normal_temperature(0, sqrt(temperature/119.7));
+
+	// string line;
+	// ifstream normal_speeds("data/normal_speeds.dat");
+	// vector<string> str_list;
+	// while (getline(normal_speeds, line)) {
+	// 	str_list.push_back(line);
+	// }
 
 	vector<vec3> positions = box_positions(n, d);
 	for (int i = 0; i < atom_count; i++) {
+		// vector<string> elements = split(str_list[i], ", ");
 		vec3 velocitiy = vec3(normal_temperature(generator), normal_temperature(generator), normal_temperature(generator));
 		atoms.push_back(Atom(positions[i], velocitiy));
 	}
 
+	// normal_speeds.close();
+
 	int atom_combination_count = (atom_count*(atom_count-1))/2;
 	vector<vector<Atom*>> atom_combinations(atom_combination_count);
 	get_atom_combinations(atom_combinations, atoms);
+
+	// for (Atom &atom : atoms) {
+	// 	printray(atom.vel);
+	// }
 
 	return tuple<double, vector<Atom>, vector<vector<Atom*>>>(L, move(atoms), move(atom_combinations));
 }
@@ -319,34 +278,50 @@ void run(string filename, int simulate_count) {
 	int length = 5;
 
 	vector<vector<double>> sum_lists(6, vector<double>((int) (length/dt)+1));
+	mutex mutex;
 	vector<double> t_list;
 
 	double start_time = get_time();
+	#pragma omp parallel for
 	for (int i = 0; i < simulate_count; i++) {
-		auto [L, atoms, atom_combinations] = create_equalibrium_atoms(108, 1.7, 180, dt, length);
+		auto [L, atoms, atom_combinations] = create_equalibrium_atoms(864, 1.7, 180, dt, length);
 
-		auto [t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list] = simulate(atoms, atom_combinations, dt, length, filename, L, i, simulate_count);
-		for (int j; j < t_list.size(); j++) {
-			sum_lists[0][j] += pot_list[j]/simulate_count;
-			sum_lists[1][j] += kin_list[j]/simulate_count;
-			sum_lists[2][j] += tot_list[j]/simulate_count;
-			sum_lists[3][j] += tmp_list[j]/simulate_count;
-			sum_lists[4][j] += vac_list[j]/simulate_count;
-			sum_lists[5][j] += msd_list[j]/simulate_count;
+		auto [_t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list] = simulate(atoms, atom_combinations, dt, length, filename, L, i, simulate_count);
+		mutex.lock();
+		t_list = _t_list;
+		for (int j = 0; j < t_list.size(); j++) {
+			sum_lists[0][j] += pot_list[j]/((double) simulate_count);
+			sum_lists[1][j] += kin_list[j]/((double) simulate_count);
+			sum_lists[2][j] += tot_list[j]/((double) simulate_count);
+			sum_lists[3][j] += tmp_list[j]/((double) simulate_count);
+			sum_lists[4][j] += vac_list[j]/((double) simulate_count);
+			sum_lists[5][j] += msd_list[j]/((double) simulate_count);
 		}
+		mutex.unlock();
 	}
-	printf("time: %.3g s\n", get_time() - start_time);
+	printf("\ntime: %.3g s\n", get_time() - start_time);
 
 	FILE* datafile = fopen(("data/"+filename+".energy").c_str(), "w");
 
 	for (int i = 0; i < t_list.size(); i++) {
-		fprintf(datafile, "%f %f %f %f %f %f\n", sum_lists[0][i], sum_lists[1][i], sum_lists[2][i], sum_lists[3][i], sum_lists[4][i], sum_lists[5][i]);
+		fprintf(datafile, "%f %f %f %f %f %f %f\n", t_list[i], sum_lists[0][i], sum_lists[1][i], sum_lists[2][i], sum_lists[3][i], sum_lists[4][i], sum_lists[5][i]);
 	}
 	fclose(datafile);
 }
 
 int main(int argc, char const *argv[]) {
 	run("null", 1);
+	// create_atoms(108, 1.7, 180);
 
 	return 0;
 }
+
+// SANIC: -O3 -march=native -fopenmp -ffast-math
+
+// Preformance improvements: (864 atoms, i7-7700K)
+// python          :~1120 s
+// pypy            : 112 s
+// default + -03   : 29 s
+// + -march=native : 28.2 s
+// + -ffast-math   : 4.41 s
+// + -fopenmp      : 0.88 (simulate_count = cpu threads)

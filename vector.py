@@ -10,7 +10,6 @@ class Vector3:
 		if hasattr(other, "__getitem__") and len(other) == 3:
 			return self.x*other[0] + self.y*other[1] + self.z*other[2]
 
-
 	def __len__(self):
 		return 3
 
