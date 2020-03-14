@@ -1,4 +1,4 @@
-#include "moldyn_functions.hpp"
+#include "../moldyn_functions.hpp"
 
 vector<string> split(string s, string delimiter) {
 	vector<string> elements;

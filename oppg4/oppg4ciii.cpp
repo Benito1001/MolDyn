@@ -53,7 +53,7 @@ double run(double temperature, int simulate_count) {
 
 int main(int argc, char const *argv[]) {
 	int Tmin = 85;
-	int Tmax = 90;
+	int Tmax = 220;
 	vector<int> T_list;
 	for (int T = Tmin; T <= Tmax; T += 5) {
 		T_list.push_back(T);
@@ -72,7 +72,7 @@ int main(int argc, char const *argv[]) {
 	vector<double> D_list;
 	for (int T : T_list) {
 		cout << "\n" << T << ":\n";
-		D_list.push_back(run(T, 8));
+		D_list.push_back(run(T, 96));
 	}
 	printf("\ntime: %.3g s\n", get_time() - start_time);
 
