@@ -1,3 +1,18 @@
+#include <iostream>
+#include <fstream>
+#include <chrono>
+#include <string>
+#include <random>
+#include <cmath>
+#include <tuple>
+#include <list>
+#include <vector>
+#include <valarray>
+#include <glm/vec3.hpp>
+#include <glm/geometric.hpp>
+#include <omp.h>
+#include <mutex>
+
 using namespace std;
 using vec3 = glm::vec<3, double>;
 
@@ -67,7 +82,21 @@ class Atom {
 		}
 };
 
-double get_length_sqrd();
-tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> simulate();
+double get_time();
+void printray(vec3 ray);
+double get_length_sqrd(vec3 ray);
+
+void get_atom_combinations(vector<vector<Atom*>> &combinations, vector<Atom> &atoms);
+double U(double r_sqrd);
+vec3 get_force(vec3 &between_vec, double r_sqrd);
+tuple<vec3, double> periodic_boundry(vec3 &between_ray, double L);
+tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double L);
+
+void ez_simulate(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, double L);
+tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> simulate(
+	vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, string filename, double L, int completion, int total_runs
+);
 void step(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double L, FILE *datafile);
-tuple<double, vector<Atom>, vector<vector<Atom*>>> create_equalibrium_atoms();
+vector<vec3> box_positions(int n, double d);
+tuple<double, vector<Atom>, vector<vector<Atom*>>> create_atoms(int atom_count, double d, double temperature);
+tuple<double, vector<Atom>, vector<vector<Atom*>>> create_equalibrium_atoms(int atom_count, double d, double temperature, double dt, double t_max);

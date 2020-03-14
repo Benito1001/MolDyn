@@ -1,19 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <chrono>
-#include <string>
-#include <random>
-#include <cmath>
-#include <tuple>
-#include <list>
-#include <vector>
-#include <valarray>
-#include <glm/vec3.hpp>
-#include <glm/geometric.hpp>
-#include <omp.h>
-#include <mutex>
-
-#include "oppg4ci.hpp"
+#include "../moldyn_functions.hpp"
 
 vector<double> calc_g(double dr, double r_max, double L) {
 	for (Atom &atom1 : atoms) {
