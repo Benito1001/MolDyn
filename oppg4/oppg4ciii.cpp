@@ -19,17 +19,17 @@ double run(double temperature, int simulate_count) {
 	double dt = 0.01;
 	int length = 5;
 
-	vector<double> avg_msd_list((int) (length/dt)+1, 0);
-	vector<double> t_list((int) (length/dt)+1);
+	vector<double> avg_msd_list((int) (length/dt), 0);
+	vector<double> t_list;
 	mutex mutex;
 
 	#pragma omp parallel for
 	for (int i = 0; i < simulate_count; i++) {
-		auto [L, atoms, atom_combinations] = create_equalibrium_atoms(864, 1.7, 180, dt, length);
+		auto [L, atoms, atom_combinations] = create_equalibrium_atoms(864, 1.7, temperature, dt, length);
 
 		auto [_t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list] = simulate(atoms, atom_combinations, dt, length, "null", L, i, simulate_count);
 		mutex.lock();
-		t_list = _t_list;
+		t_list = move(_t_list);
 		for (size_t i = 0; i < avg_msd_list.size(); i++) {
 			avg_msd_list[i] += msd_list[i]/simulate_count;
 		}
@@ -76,7 +76,7 @@ int main(int argc, char const *argv[]) {
 	}
 	printf("\ntime: %.3g s\n", get_time() - start_time);
 
-	FILE* datafile = fopen("data/oppg4ciii.dat", "w");
+	FILE* datafile = fopen("data/null.dat", "w");
 	for (int i = 0; i < D_list.size(); i++) {
 		fprintf(datafile, "%s %f\n", T2eqT[T_list[i]].c_str(), D_list[i]);
 	}

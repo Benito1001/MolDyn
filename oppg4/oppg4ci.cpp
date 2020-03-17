@@ -18,7 +18,7 @@ void run(string filename, int simulate_count) {
 	double dt = 0.01;
 	int length = 5;
 
-	vector<vector<double>> sum_lists(6, vector<double>((int) (length/dt)+1));
+	vector<vector<double>> sum_lists(6, vector<double>((int) (length/dt)));
 	mutex mutex;
 	vector<double> t_list;
 
@@ -29,7 +29,7 @@ void run(string filename, int simulate_count) {
 
 		auto [_t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list] = simulate(atoms, atom_combinations, dt, length, filename, L, i, simulate_count);
 		mutex.lock();
-		t_list = _t_list;
+		t_list = move(_t_list);
 		for (int j = 0; j < t_list.size(); j++) {
 			sum_lists[0][j] += pot_list[j]/((double) simulate_count);
 			sum_lists[1][j] += kin_list[j]/((double) simulate_count);
