@@ -23,21 +23,21 @@ class Atom:
 			self.pos.x = self.pos.x - L
 			self.teleports.x += 1
 		elif self.pos.x < 0:
-			self.pos.x = L - self.pos.x
+			self.pos.x = self.pos.x + L
 			self.teleports.x -= 1
 
 		if self.pos.y > L:
 			self.pos.y = self.pos.y - L
 			self.teleports.y += 1
 		elif self.pos.y < 0:
-			self.pos.y = L - self.pos.y
+			self.pos.y = self.pos.y + L
 			self.teleports.y -= 1
 
 		if self.pos.z > L:
 			self.pos.z = self.pos.z - L
 			self.teleports.z += 1
 		elif self.pos.z < 0:
-			self.pos.z = L - self.pos.z
+			self.pos.z = self.pos.z + L
 			self.teleports.z -= 1
 
 	def dist_traveled(self, L):

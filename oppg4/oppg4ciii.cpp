@@ -72,11 +72,11 @@ int main(int argc, char const *argv[]) {
 	vector<double> D_list;
 	for (int T : T_list) {
 		cout << "\n" << T << ":\n";
-		D_list.push_back(run(T, 96));
+		D_list.push_back(run(T, 288));
 	}
 	printf("\ntime: %.3g s\n", get_time() - start_time);
 
-	FILE* datafile = fopen("data/null.dat", "w");
+	FILE* datafile = fopen("data/oppg4ciii.dat", "w");
 	for (int i = 0; i < D_list.size(); i++) {
 		fprintf(datafile, "%s %f\n", T2eqT[T_list[i]].c_str(), D_list[i]);
 	}

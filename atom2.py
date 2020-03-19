@@ -26,17 +26,17 @@ class Atom:
 		if self.pos.x > L:
 			self.pos.x = self.pos.x - L
 		elif self.pos.x < 0:
-			self.pos.x = L - self.pos.x
+			self.pos.x = self.pos.x + L
 
 		if self.pos.y > L:
 			self.pos.y = self.pos.y - L
 		elif self.pos.y < 0:
-			self.pos.y = L - self.pos.y
+			self.pos.y = self.pos.y + L
 
 		if self.pos.z > L:
 			self.pos.z = self.pos.z - L
 		elif self.pos.z < 0:
-			self.pos.z = L - self.pos.z
+			self.pos.z = self.pos.z + L
 
 	def update_euler(self, dt):
 		"""
