@@ -51,7 +51,7 @@ void run(string filename, int simulate_count) {
 }
 
 int main(int argc, char const *argv[]) {
-	run("null", 1);
+	run("data4ci_cpp", 2048);
 
 	return 0;
 }

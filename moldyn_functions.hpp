@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 #include <random>
+#include <utility>
 #include <cmath>
 #include <tuple>
 #include <list>
@@ -44,7 +45,7 @@ class Atom {
 				pos.x = pos.x - L;
 				teleports.x += 1;
 			} else if (pos.x < 0) {
-				pos.x = L - pos.x;
+				pos.x = pos.x + L;
 				teleports.x -= 1;
 			}
 
@@ -52,7 +53,7 @@ class Atom {
 				pos.y = pos.y - L;
 				teleports.y += 1;
 			} else if (pos.y < 0) {
-				pos.y = L - pos.y;
+				pos.y = pos.y + L;
 				teleports.y -= 1;
 			}
 
@@ -60,7 +61,7 @@ class Atom {
 				pos.z = pos.z - L;
 				teleports.z += 1;
 			} else if (pos.z < 0) {
-				pos.z = L - pos.z;
+				pos.z = pos.z + L;
 				teleports.z -= 1;
 			}
 		}
@@ -86,17 +87,17 @@ double get_time();
 void printray(vec3 ray);
 double get_length_sqrd(vec3 ray);
 
-void get_atom_combinations(vector<vector<Atom*>> &combinations, vector<Atom> &atoms);
+void get_atom_combinations(vector<pair<Atom*, Atom*>> &combinations, vector<Atom> &atoms);
 double U(double r_sqrd);
 vec3 get_force(vec3 &between_vec, double r_sqrd);
 tuple<vec3, double> periodic_boundry(vec3 &between_ray, double L);
-tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double L);
+tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double L);
 
-void ez_simulate(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, double L);
+void ez_simulate(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double t_max, double L);
 tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> simulate(
-	vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, string filename, double L, int completion, int total_runs
+	vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double t_max, string filename, double L, int completion, int total_runs
 );
-void step(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double L, FILE *datafile);
+void step(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double L, FILE *datafile);
 vector<vec3> box_positions(int n, double d);
-tuple<double, vector<Atom>, vector<vector<Atom*>>> create_atoms(int atom_count, double d, double temperature);
-tuple<double, vector<Atom>, vector<vector<Atom*>>> create_equalibrium_atoms(int atom_count, double d, double temperature, double dt, double t_max);
+tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>> create_atoms(int atom_count, double d, double temperature);
+tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>> create_equalibrium_atoms(int atom_count, double d, double temperature, double dt, double t_max);

@@ -72,9 +72,9 @@ int main(int argc, char const *argv[]) {
 	vector<double> D_list;
 	for (int T : T_list) {
 		cout << "\n" << T << ":\n";
-		D_list.push_back(run(T, 288));
+		D_list.push_back(run(T, 512));
 	}
-	printf("\ntime: %.3g s\n", get_time() - start_time);
+	printf("\ntime: %.6g s\n", get_time() - start_time);
 
 	FILE* datafile = fopen("data/oppg4ciii.dat", "w");
 	for (int i = 0; i < D_list.size(); i++) {

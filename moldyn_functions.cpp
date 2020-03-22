@@ -12,14 +12,22 @@ double get_length_sqrd(vec3 ray) {
 	return pow(ray.x, 2) + pow(ray.y, 2) + pow(ray.z, 2);
 }
 
-void get_atom_combinations(vector<vector<Atom*>> &combinations, vector<Atom> &atoms) {
+void get_atom_combinations(vector<pair<Atom*, Atom*>> &combinations, vector<Atom> &atoms) {
 	string bitmask(2, 1); // 2 leading 1's
 	bitmask.resize(atoms.size(), 0); // N-2 trailing 0's
 
 	int i = 0;
 	do {
+		bool first = true;
 		for (int j = 0; j < atoms.size(); j++) {
-				if (bitmask[j]) combinations[i].push_back(&atoms[j]);
+			if (bitmask[j]) {
+				if (first) {
+					combinations[i].first = &atoms[j];
+					first = false;
+				} else {
+					combinations[i].second = &atoms[j];
+				}
+			}
 		}
 		i++;
 	} while (prev_permutation(bitmask.begin(), bitmask.end()));
@@ -52,12 +60,12 @@ tuple<vec3, double> periodic_boundry(vec3 &between_ray, double L) {
 	return tuple<vec3, double>(direction_ray, r_sqrd);
 }
 
-tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double L) {
+tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double L) {
 	// Calculate potential energy:
 	double potential_energy = 0;
-	for (vector<Atom*> &atom_combination : atom_combinations) {
-		Atom *atom1 = atom_combination[0];
-		Atom *atom2 = atom_combination[1];
+	for (pair<Atom*, Atom*> &atom_combination : atom_combinations) {
+		Atom *atom1 = atom_combination.first;
+		Atom *atom2 = atom_combination.second;
 
 		vec3 between_vec = atom1->pos - atom2->pos;
 		auto [direction_vec, r_sqrd] = periodic_boundry(between_vec, L);
@@ -74,7 +82,7 @@ tuple<double, double, double> get_energy(vector<Atom> &atoms, vector<vector<Atom
 }
 
 
-void ez_simulate(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, double L) {
+void ez_simulate(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double t_max, double L) {
 	vector<double> t_list((int) t_max/dt, 0);
 
 	FILE* datafile = fopen("data/null", "w");
@@ -82,7 +90,7 @@ void ez_simulate(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, 
 	for (size_t i = 0; i < t_list.size(); i++) {
 		t_list[i] = i*dt;
 		// Fancy progress indicator
-		if ((int) (t_list[i]*6/t_max) % 1 == 0) {
+		if ((int) (t_list[i]*6/t_max*10) % 10 == 0) {
 			cout << "\r";
 			for (int j = 0; j < t_list[i]*6/t_max; j++) {
 				cout << ".";
@@ -96,7 +104,7 @@ void ez_simulate(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, 
 }
 
 tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>, vector<double>> simulate(
-	vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double t_max, string filename, double L, int completion, int total_runs
+	vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double t_max, string filename, double L, int completion, int total_runs
 ) {
 	// Declare variables
 	int n = t_max/dt;
@@ -113,8 +121,9 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	for (size_t i = 0; i < t_list.size(); i++) {
 		t_list[i] = i*dt;
 		// Fancy progress indicator, now even more complicated
-		if ((int) (t_list[i]*100/t_max) % 1 == 0) {
-			printf("\r...... %i/%i : %3.0f %%", completion+1, total_runs, (100*completion + t_list[i]*100/t_max)/total_runs);
+		double run_percent = (100*completion + t_list[i]*100/t_max)/total_runs;
+		if ((int) (run_percent*10) % 10 == 0) {
+			printf("\r...... %i/%i : %3.0f %%", completion+1, total_runs, run_percent);
 			fflush(stdout);
 		}
 
@@ -153,11 +162,11 @@ tuple<vector<double>, vector<double>, vector<double>, vector<double>, vector<dou
 	return make_tuple(t_list, pot_list, kin_list, tot_list, tmp_list, vac_list, msd_list);
 }
 
-void step(vector<Atom> &atoms, vector<vector<Atom*>> &atom_combinations, double dt, double L, FILE *datafile) {
+void step(vector<Atom> &atoms, vector<pair<Atom*, Atom*>> &atom_combinations, double dt, double L, FILE *datafile) {
 	// Add the force acting on the particles efficiently using pairs
-	for (vector<Atom*> &atom_combination : atom_combinations) {
-		Atom *atom1 = atom_combination[0];
-		Atom *atom2 = atom_combination[1];
+	for (pair<Atom*, Atom*> &atom_combination : atom_combinations) {
+		Atom *atom1 = atom_combination.first;
+		Atom *atom2 = atom_combination.second;
 
 		vec3 between_ray = atom1->pos - atom2->pos;
 		auto [direction_ray, r_sqrd] = periodic_boundry(between_ray, L);
@@ -195,7 +204,7 @@ vector<vec3> box_positions(int n, double d) {
 	return positions;
 }
 
-tuple<double, vector<Atom>, vector<vector<Atom*>>> create_atoms(int atom_count, double d, double temperature) {
+tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>> create_atoms(int atom_count, double d, double temperature) {
 	int n = cbrt(atom_count/4.0);
 	double L = d*n;
 
@@ -222,17 +231,17 @@ tuple<double, vector<Atom>, vector<vector<Atom*>>> create_atoms(int atom_count, 
 	// normal_speeds.close();
 
 	int atom_combination_count = (atom_count*(atom_count-1))/2;
-	vector<vector<Atom*>> atom_combinations(atom_combination_count);
+	vector<pair<Atom*, Atom*>> atom_combinations(atom_combination_count);
 	get_atom_combinations(atom_combinations, atoms);
 
 	// for (Atom &atom : atoms) {
 	// 	printray(atom.vel);
 	// }
 
-	return tuple<double, vector<Atom>, vector<vector<Atom*>>>(L, move(atoms), move(atom_combinations));
+	return tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>>(L, move(atoms), move(atom_combinations));
 }
 
-tuple<double, vector<Atom>, vector<vector<Atom*>>> create_equalibrium_atoms(int atom_count, double d, double temperature, double dt, double t_max) {
+tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>> create_equalibrium_atoms(int atom_count, double d, double temperature, double dt, double t_max) {
 	auto [L, warm_atoms, atom_combinations] = create_atoms(atom_count, d, temperature);
 	ez_simulate(warm_atoms, atom_combinations, dt, t_max, L);
 	for (Atom &atom : warm_atoms) {
@@ -240,5 +249,5 @@ tuple<double, vector<Atom>, vector<vector<Atom*>>> create_equalibrium_atoms(int 
 		atom.pos0 = atom.pos;
 	}
 
-	return tuple<double, vector<Atom>, vector<vector<Atom*>>>(L, move(warm_atoms), move(atom_combinations));
+	return tuple<double, vector<Atom>, vector<pair<Atom*, Atom*>>>(L, move(warm_atoms), move(atom_combinations));
 }
